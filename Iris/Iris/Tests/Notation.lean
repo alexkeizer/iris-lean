@@ -17,6 +17,7 @@ open Iris.BI
 
 variable (p : Bool) (φ : Prop)
 variable [BIBase PROP] (P Q R : PROP) (Ψ : Nat → PROP) (Φ : Nat → Nat → PROP)
+variable (F : PROP → PROP) (G : Bool → PROP → PROP)
 
 /-! ## Interface -/
 
@@ -142,6 +143,10 @@ info: match true with
 #guard_msgs in #check iprop(match (generalizing := false) (motive := Bool → PROP) true with
   | true | false => P ∗ Q
 )
+/-- info: F iprop(□ P) : PROP -/
+#guard_msgs in #check iprop(F (□ P))
+/-- info: G true iprop(□ P) : PROP -/
+#guard_msgs in #check iprop(G true (□ P))
 
 /-! ## Derived Connectives -/
 

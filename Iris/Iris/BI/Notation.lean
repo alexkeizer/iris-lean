@@ -36,6 +36,15 @@ macro_rules
           | `(matchAltExpr| | $[$lhs]|* => $rhs) => `(matchAltExpr| | $[$lhs]|* => iprop($rhs))
           | _ => throwUnsupported
         `(match $[$g:generalizingParam]? $[$m:motive]? $[$x:matchDiscr],* with $[$alts:matchAlt]*)
+  | `(iprop($f:term $x $xs*)) => do
+      let iprop : Term → MacroM Term
+        -- Pass `_` arguments through unchanged; changing such arguments to `iprop(_)`
+        -- seems to interfere with synthesis for instance-implicit arguments.
+        | x@`(_) => return ⟨x⟩
+        | `($x) => `(iprop($x))
+      let x ← iprop x
+      let xs ← xs.mapM iprop
+      ``($f $x $xs*)
 
 macro:max "iprop(" P:term " : " t:term ")" : term => `((iprop($P) : $t))
 
@@ -67,6 +76,10 @@ partial def unpackIprop [Monad m] [MonadRef m] [MonadQuotation m] : Term → m T
             `(matchAltExpr| | $[$lhs]|* => $rhs)
         | alt => return ⟨alt⟩
       `(match $[$g:generalizingParam]? $[$mot:motive]? $[$x:matchDiscr],* with $[$alts:matchAlt]*)
+  | `($f $x $xs*) => do
+    let x ← unpackIprop x
+    let xs ← Array.mapM (m:=m) unpackIprop xs
+    `($f $x $xs*)
   -- Fallback case
   | `($t)                    => `($t:term)
 
