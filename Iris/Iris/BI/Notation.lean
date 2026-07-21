@@ -37,14 +37,14 @@ macro_rules
           | _ => throwUnsupported
         `(match $[$g:generalizingParam]? $[$m:motive]? $[$x:matchDiscr],* with $[$alts:matchAlt]*)
   | `(iprop($f:term $x $xs*)) => do
-      let iprop : Term → MacroM Term
+      let ipropArg : Term → MacroM Term
         -- Pass `_` arguments through unchanged; changing such arguments to `iprop(_)`
         -- seems to interfere with synthesis for instance-implicit arguments.
         | x@`(_) => return ⟨x⟩
         | `($x) => `(iprop($x))
-      let x ← iprop x
-      let xs ← xs.mapM iprop
-      ``($f $x $xs*)
+      let x ← ipropArg x
+      let xs ← xs.mapM ipropArg
+      ``(iprop($f) $x $xs*)
 
 macro:max "iprop(" P:term " : " t:term ")" : term => `((iprop($P) : $t))
 
