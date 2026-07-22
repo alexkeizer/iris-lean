@@ -143,8 +143,13 @@ info: match true with
 #guard_msgs in #check iprop(match (generalizing := false) (motive := Bool → PROP) true with
   | true | false => P ∗ Q
 )
+
+/-! ## Function Application -/
+
 /-- info: F iprop(□ P) : PROP -/
 #guard_msgs in #check iprop(F (□ P))
+/-- info: iprop(□ F (P ∗ Q)) : PROP -/
+#guard_msgs in #check iprop(□ F (P ∗ Q))
 /-- info: G true iprop(□ P) : PROP -/
 #guard_msgs in #check iprop(G true (□ P))
 

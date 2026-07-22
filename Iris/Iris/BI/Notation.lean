@@ -29,13 +29,7 @@ macro_rules
   | `(iprop(if $c then $t else $e)) => ``(if $c then iprop($t) else iprop($e))
   | `(iprop(($P : $t)))             => ``((iprop($P) : $t))
   | `(iprop(fun $xs* => $P))        => ``(fun $xs* => iprop($P))
-  -- `iprop(match …)` expansion wraps the rhs of each match arm in `iprop(…)`
-  | `(iprop(match $[$g:generalizingParam]? $[$m:motive]? $[$x:matchDiscr],* with
-              $[$alts:matchAlt]*)) => do
-        let alts ← alts.mapM <| fun
-          | `(matchAltExpr| | $[$lhs]|* => $rhs) => `(matchAltExpr| | $[$lhs]|* => iprop($rhs))
-          | _ => throwUnsupported
-        `(match $[$g:generalizingParam]? $[$m:motive]? $[$x:matchDiscr],* with $[$alts:matchAlt]*)
+  -- function application
   | `(iprop($f:term $x $xs*)) => do
       let ipropArg : Term → MacroM Term
         -- Pass `_` arguments through unchanged; changing such arguments to `iprop(_)`
@@ -44,7 +38,14 @@ macro_rules
         | `($x) => `(iprop($x))
       let x ← ipropArg x
       let xs ← xs.mapM ipropArg
-      ``(iprop($f) $x $xs*)
+      ``($f $x $xs*)
+  -- `iprop(match …)` expansion wraps the rhs of each match arm in `iprop(…)`
+  | `(iprop(match $[$g:generalizingParam]? $[$m:motive]? $[$x:matchDiscr],* with
+              $[$alts:matchAlt]*)) => do
+        let alts ← alts.mapM <| fun
+          | `(matchAltExpr| | $[$lhs]|* => $rhs) => `(matchAltExpr| | $[$lhs]|* => iprop($rhs))
+          | _ => throwUnsupported
+        `(match $[$g:generalizingParam]? $[$m:motive]? $[$x:matchDiscr],* with $[$alts:matchAlt]*)
 
 macro:max "iprop(" P:term " : " t:term ")" : term => `((iprop($P) : $t))
 
@@ -59,7 +60,10 @@ partial def unpackIprop [Monad m] [MonadRef m] [MonadQuotation m] : Term → m T
   | `($P:ident)              => do `($P)
   | `(?$P:ident)             => do `(?$P)
   | `(($P))                  => do `(($(← unpackIprop P)))
-  | `($P $[ $Q]*)            => do ``($P $[ $Q]*)
+  | `($f $x $xs*) => do
+    let x ← unpackIprop x
+    let xs ← Array.mapM (m:=m) unpackIprop xs
+    `($f $x $xs*)
   | `(if $c then $t else $e) => do
     let t ← unpackIprop t
     let e ← unpackIprop e
@@ -76,10 +80,6 @@ partial def unpackIprop [Monad m] [MonadRef m] [MonadQuotation m] : Term → m T
             `(matchAltExpr| | $[$lhs]|* => $rhs)
         | alt => return ⟨alt⟩
       `(match $[$g:generalizingParam]? $[$mot:motive]? $[$x:matchDiscr],* with $[$alts:matchAlt]*)
-  | `($f $x $xs*) => do
-    let x ← unpackIprop x
-    let xs ← Array.mapM (m:=m) unpackIprop xs
-    `($f $x $xs*)
   -- Fallback case
   | `($t)                    => `($t:term)
 
